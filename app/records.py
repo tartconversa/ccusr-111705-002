@@ -28,3 +28,33 @@ def read_detail_entries(path):
     with sqlite3.connect(path) as db:
         rows = db.execute('SELECT payload FROM detail_entries ORDER BY visit_id').fetchall()
     return [json.loads(row[0]) for row in rows]
+
+
+def save_slot_observations(path, rows):
+    """档期观察收据：按观察行追加，绝不覆盖；同一项目可多次核对留痕。"""
+    path = Path(path)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    with sqlite3.connect(path) as db:
+        db.execute(
+            'CREATE TABLE IF NOT EXISTS slot_observations ('
+            'visit_id INTEGER PRIMARY KEY, observation_id TEXT NOT NULL, '
+            'item_id TEXT NOT NULL, business_key TEXT NOT NULL, '
+            'phase TEXT NOT NULL, source TEXT NOT NULL, payload TEXT NOT NULL)')
+        for row in rows:
+            if row['catalog_fact']['identity'] != row['item_id']:
+                raise ValueError('catalog and observation identity mismatch')
+            db.execute(
+                'INSERT INTO slot_observations '
+                '(observation_id, item_id, business_key, phase, source, payload) '
+                'VALUES (?, ?, ?, ?, ?, ?)',
+                (row['observation_id'], row['item_id'], row['business_key'],
+                 row['phase'], row['source'],
+                 json.dumps(row, ensure_ascii=False)))
+    return len(rows)
+
+
+def read_slot_observations(path):
+    with sqlite3.connect(path) as db:
+        rows = db.execute(
+            'SELECT payload FROM slot_observations ORDER BY rowid').fetchall()
+    return [json.loads(row[0]) for row in rows]
