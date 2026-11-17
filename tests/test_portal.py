@@ -10,6 +10,6 @@ class PortalInteractionTest(BrowserBaselineTest):
             try:
                 page = browser.new_page()
                 page.goto(self.origin + "detail?id=" + DATA["items"][0]["id"], wait_until="domcontentloaded")
-                page.locator('#date').select_option('周日');page.locator('#slots').click();self.assertEqual(page.locator('#slot-text').inner_text(),'周日：体验档期')
+                page.locator('#date').select_option('周日');page.locator('#slots').click();page.locator('#slot-text').get_by_text('周日：体验档期').wait_for()
             finally:
                 browser.close()
